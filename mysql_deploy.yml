@@ -1,0 +1,78 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: nextcloud-mysql
+  labels:
+    app: nextcloud
+spec:
+  ports:
+    - port: 3306
+  selector:
+    app: nextcloud
+    tier: mysql
+  clusterIP: None
+
+---
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mysql-pv-claim
+  labels:
+    app: nextcloud
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi
+
+---
+
+apiVersion: apps/v1 
+kind: Deployment
+metadata:
+  name: nextcloud-mysql
+  labels:
+    app: nextcoud
+spec:
+  selector:
+    matchLabels:
+      app: nextcloud
+      tier: mysql
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: nextcloud
+        tier: mysql
+    spec:
+      containers:
+      - image: mysql:5.6
+        name: mysql
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysql-pass
+              key: password
+        - name: MYSQL_USER
+          value: aakash
+          name: MYSQL_PASSWORD
+           valueFrom:
+             secretKeyRef:
+               name: mysqluser-pass
+               key: password1
+         - name: MYSQL_DATABASE
+           value: mydb 
+        ports:
+        - containerPort: 3306
+          name: mysql
+        volumeMounts:
+        - name: mysql-persistent-storage
+          mountPath: /var/lib/mysql
+      volumes:
+      - name: mysql-persistent-storage
+        persistentVolumeClaim:
+          claimName: mysql-pv-claim
